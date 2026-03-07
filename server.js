@@ -1,6 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
@@ -10,10 +12,15 @@ app.use(cors());
 /* Serve frontend files */
 app.use(express.static("public"));
 
-/* Dummy user database */
+/* Ensure uploads folder exists */
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
+/* Dummy user database */
 const users = [
-{ email: "user@gmail.com", password: "12345" }
+  { email: "user@gmail.com", password: "12345" }
 ];
 
 let generatedOTP = "";
@@ -22,118 +29,103 @@ let generatedOTP = "";
 
 app.post("/login", (req, res) => {
 
-const { email, password } = req.body;
+  const { email, password } = req.body;
 
-const user = users.find(
-u => u.email === email && u.password === password
-);
+  const user = users.find(
+    u => u.email === email && u.password === password
+  );
 
-if(user){
+  if (user) {
 
-res.json({
-success:true,
-message:"Login Successful"
+    res.json({
+      success: true,
+      message: "Login Successful"
+    });
+
+  } else {
+
+    res.json({
+      success: false,
+      message: "User not registered. Please register first."
+    });
+
+  }
+
 });
-
-}else{
-
-res.json({
-success:false,
-message:"User not registered. Please register first."
-});
-
-}
-
-});
-
 
 /* ================= FILE UPLOAD ================= */
 
 const storage = multer.diskStorage({
 
-destination: function(req,file,cb){
-cb(null,"uploads/");
-},
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
 
-filename: function(req,file,cb){
-cb(null, Date.now()+"-"+file.originalname);
-}
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
 
 });
 
 const upload = multer({ storage: storage });
 
-app.post("/upload", upload.single("document"), (req,res)=>{
+app.post("/upload", upload.single("document"), (req, res) => {
 
-if(!req.file){
+  if (!req.file) {
+    return res.json({
+      success: false,
+      message: "No file uploaded"
+    });
+  }
 
-return res.json({
-success:false,
-message:"No file uploaded"
-});
-
-}
-
-res.json({
-success:true,
-message:"Document uploaded successfully"
-});
+  res.json({
+    success: true,
+    message: "Document uploaded successfully"
+  });
 
 });
-
 
 /* ================= GENERATE OTP ================= */
 
-app.get("/generate-otp",(req,res)=>{
+app.get("/generate-otp", (req, res) => {
 
-generatedOTP = Math.floor(1000 + Math.random()*9000);
+  generatedOTP = Math.floor(1000 + Math.random() * 9000);
 
-res.json({
-success:true,
-otp:generatedOTP
+  res.json({
+    success: true,
+    otp: generatedOTP
+  });
+
 });
-
-});
-
 
 /* ================= VERIFY OTP ================= */
 
-app.post("/verify-otp",(req,res)=>{
+app.post("/verify-otp", (req, res) => {
 
-const { otp } = req.body;
+  const { otp } = req.body;
 
-if(otp == generatedOTP){
+  if (otp == generatedOTP) {
 
-res.json({
-success:true,
-message:"OTP verified successfully"
+    res.json({
+      success: true,
+      message: "OTP verified successfully"
+    });
+
+  } else {
+
+    res.json({
+      success: false,
+      message: "Invalid OTP"
+    });
+
+  }
+
 });
-
-}else{
-
-res.json({
-success:false,
-message:"Invalid OTP"
-});
-
-}
-
-});
-
 
 /* ================= START SERVER ================= */
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-
-console.log("Server running at http://localhost:3000");
-
-});
-
-/* Start Server */
-
-app.listen(3000,()=>{
-    console.log("Server running on http://localhost:3000");
-
+  console.log(`Server running on port ${PORT}`);
 });
